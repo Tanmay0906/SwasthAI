@@ -1,0 +1,2564 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwasthAI Health Dashboard</title>
+    <meta name="description" content="Advanced health monitoring dashboard with real-time data visualization and AI recommendations">
+    <!-- CDN Imports -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@3.9.4/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-moment/1.0.1/chartjs-adapter-moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.20.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.38/bundled/lenis.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --primary: #3b82f6;
+            --secondary: #8b5cf6;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --dark-bg: #0b1120;
+            --card-bg: rgba(15, 23, 42, 0.7);
+        }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: 
+                radial-gradient(ellipse at top, var(--dark-bg), transparent 80%),
+                radial-gradient(ellipse at bottom, #1e293b, #0f172a 100%);
+            color: #e2e8f0;
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-attachment: fixed;
+        }
+        .card-glass {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
+            border-radius: 1rem;
+            transition: all 0.3s ease;
+            overflow: hidden;
+            position: relative;
+        }
+        .card-glass:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.42);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+        .card-glass::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            opacity: 0.7;
+        }
+        .pulse-animation {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 100%;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .summary-panel {
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+            border-left: 3px solid;
+        }
+        
+        .summary-panel:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            background: rgba(30, 41, 59, 0.7);
+        }
+        
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+        
+        .prediction-history {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .history-item {
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: rgba(30, 41, 59, 0.4);
+            border-radius: 0.5rem;
+            border-left: 3px solid;
+            transition: all 0.3s ease;
+        }
+        
+        .history-item:hover {
+            transform: translateX(5px);
+            background: rgba(30, 41, 59, 0.6);
+        }
+        
+        .history-item.critical {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+        
+        .history-item.warning {
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+        
+        .history-item.normal {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+           
+        /* Recommendations styling */
+        .recommendation {
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            border-left: 4px solid;
+            background: rgba(30, 41, 59, 0.4);
+            transition: all 0.3s ease;
+        }
+        
+        .recommendation:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            background: rgba(30, 41, 59, 0.6);
+        }
+        
+        .recommendation.critical {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.15);
+            animation: alert-pulse 2s infinite;
+        }
+        
+        .recommendation.warning {
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.15);
+        }
+        
+        .recommendation.suggestion {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.15);
+        }
+        
+        .recommendation.reminder {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.15);
+        }
+        
+        @keyframes alert-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+        }
+        
+        /* Scrollbar styling */
+        #recommendations-container::-webkit-scrollbar,
+        .prediction-history::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        #recommendations-container::-webkit-scrollbar-track,
+        .prediction-history::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 3px;
+        }
+        
+        #recommendations-container::-webkit-scrollbar-thumb,
+        .prediction-history::-webkit-scrollbar-thumb {
+            background: #3b82f6;
+            border-radius: 3px;
+        }
+        
+        /* Notification styling */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .notification.success {
+            background-color: #10b981;
+            border-left: 4px solid #059669;
+        }
+        
+        .notification.error {
+            background-color: #ef4444;
+            border-left: 4px solid #dc2626;
+        }
+        
+        .notification.warning {
+            background-color: #f59e0b;
+            border-left: 4px solid #d97706;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        /* ECG Wave Animation */
+        .ecg-line {
+            position: absolute;
+            height: 2px;
+            background: #8b5cf6;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            transform: translateY(-50%);
+            z-index: 1;
+        }
+        
+        .ecg-wave {
+            position: absolute;
+            height: 100%;
+            width: 100%;
+            top: 0;
+            left: 0;
+            background: linear-gradient(90deg, rgba(139, 92, 246, 0) 0%, rgba(139, 92, 246, 0.8) 50%, rgba(139, 92, 246, 0) 100%);
+            background-size: 200% 100%;
+            animation: ecgWave 2s linear infinite;
+            z-index: 2;
+        }
+        
+        @keyframes ecgWave {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        /* Glow effects */
+        .glow {
+            filter: drop-shadow(0 0 8px currentColor);
+        }
+        
+        .glow-red {
+            filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.7));
+        }
+        
+        .glow-blue {
+            filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.7));
+        }
+        
+        .glow-green {
+            filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.7));
+        }
+        
+        /* Metric value animations */
+        @keyframes valueChange {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .value-change {
+            animation: valueChange 0.5s ease;
+        }
+        
+        /* Floating elements */
+        .floating {
+            animation: floating 3s ease-in-out infinite;
+        }
+        
+        @keyframes floating {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        /* Mobile responsive adjustments */
+        @media (max-width: 768px) {
+            .grid-cols-1, .grid-cols-2, .grid-cols-3, .grid-cols-4, .grid-cols-5 {
+                grid-template-columns: 1fr !important;
+            }
+            
+            .flex-col-mobile {
+                flex-direction: column;
+            }
+            
+            .text-3xl {
+                font-size: 1.5rem !important;
+                line-height: 2rem !important;
+            }
+            
+            .p-6 {
+                padding: 1rem !important;
+            }
+            
+            .h-24, .h-40, .h-64 {
+                height: auto !important;
+                min-height: 120px;
+            }
+            
+            .gap-6 {
+                gap: 1rem !important;
+            }
+            
+            .mb-8 {
+                margin-bottom: 1.5rem !important;
+            }
+        }
+        
+        /* ECG Mode Toggle */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            margin-left: 1rem;
+        }
+        
+        .toggle-label {
+            margin-right: 0.5rem;
+            font-size: 0.875rem;
+            color: #e2e8f0;
+        }
+        
+        /* Gradient text */
+        .gradient-text {
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            background-image: linear-gradient(90deg, #3b82f6, #8b5cf6);
+        }
+        
+        /* Animated background */
+        .animated-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -1;
+            opacity: 0.03;
+            background: linear-gradient(45deg, #3b82f6, #8b5cf6, #ec4899, #f59e0b);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+        }
+        
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* Custom scrollbar for the entire page */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #3b82f6;
+            border-radius: 5px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2563eb;
+        }
+        
+        /* Floating particles */
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: -1;
+            filter: blur(1px);
+        }
+        
+        /* Dashboard header */
+        .dashboard-header {
+            background: linear-gradient(90deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6));
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Status indicator */
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        
+        .status-active {
+            background-color: #10b981;
+            box-shadow: 0 0 10px #10b981;
+        }
+        
+        /* Sensor card */
+        .sensor-card {
+            transition: all 0.3s ease;
+            border-left: 3px solid;
+        }
+        
+        .sensor-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Value display */
+        .value-display {
+            font-size: 2.5rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+        
+        /* Unit display */
+        .unit-display {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+        
+        /* Metric card */
+        .metric-card {
+            transition: all 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        /* Footer */
+        .dashboard-footer {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(15, 23, 42, 0.5);
+        }
+        
+        /* 3D Chart styling */
+        .chart-3d {
+            perspective: 1000px;
+            transform-style: preserve-3d;
+        }
+        
+        /* Floating Action Button */
+        .fab-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 100;
+        }
+        
+        .fab-main {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .fab-main:hover {
+            transform: scale(1.1) rotate(90deg);
+            box-shadow: 0 6px 24px rgba(59, 130, 246, 0.4);
+        }
+        
+        .fab-menu {
+            position: absolute;
+            bottom: 70px;
+            right: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transform: translateY(20px);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+        
+        .fab-menu.open {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .fab-item {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .fab-item:hover {
+            transform: scale(1.1);
+        }
+        
+        /* DaisyUI overrides */
+        .toggle:checked {
+            background-color: #3b82f6 !important;
+            border-color: #3b82f6 !important;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #6366f1) !important;
+            border: none !important;
+            color: white !important;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #f97316) !important;
+            border: none !important;
+            color: white !important;
+        }
+        
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+        
+        /* Radial progress for health indicators */
+        .radial-progress {
+            --value: 0;
+            --size: 5rem;
+            --thickness: 8px;
+        }
+        
+        /* DaisyUI card enhancements */
+        .card {
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        /* DaisyUI badge enhancements */
+        .badge {
+            padding: 0.5rem 1rem;
+            font-weight: 600;
+        }
+        #second-hand {
+            animation: tick 60s linear infinite;
+        }
+        @keyframes tick {
+            from { transform: translateY(-50%) rotate(0deg); }
+            to { transform: translateY(-50%) rotate(360deg); }
+        }
+        
+        .status-pulse {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #10B981;
+            position: relative;
+        }
+        .status-pulse::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background: #10B981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.7; }
+            70% { transform: scale(2.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+        
+        .animated-icon {
+            width: 24px;
+            height: 24px;
+        }
+    </style>
+</head>
+<body class="min-h-screen font-outfit">
+    <!-- Animated background particles -->
+    <div id="particles-js"></div>
+    
+    <!-- Floating Action Button -->
+    <div class="fab-container">
+        <div class="fab-menu" id="fab-menu">
+            <div class="fab-item tooltip tooltip-left" data-tip="Refresh Data" onclick="fetchData()">
+                <i class="fas fa-sync-alt"></i>
+            </div>
+            <div class="fab-item tooltip tooltip-left" data-tip="Export PDF" onclick="exportDataAsPDF()">
+                <i class="fas fa-file-pdf"></i>
+            </div>
+            <div class="fab-item tooltip tooltip-left" data-tip="Emergency" onclick="triggerEmergencyAlert()">
+                <i class="fas fa-bell"></i>
+            </div>
+        </div>
+        <div class="fab-main" id="fab-main">
+            <i class="fas fa-plus text-xl"></i>
+        </div>
+    </div>
+    
+    <!-- Main dashboard container -->
+    <div class="container mx-auto px-4 py-6" id="dashboard-export">
+        <!-- Header Section -->
+        <header class="dashboard-header flex flex-col md:flex-row justify-between items-center mb-8 p-4 rounded-xl">
+            <div class="flex items-center space-x-4 mb-4 md:mb-0">
+                <div class="p-3 bg-gradient-to-r from-blue-500 to-blue-700 rounded-xl shadow-lg floating">
+                    <i class="fas fa-heartbeat text-2xl text-white glow"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold gradient-text">
+                        SwasthAI Health Dashboard
+                    </h1>
+                    <p class="text-sm text-gray-400">Real-time Health Monitoring System</p>
+                </div>
+            </div>
+
+            <div class="greeting-clock flex items-center space-x-3">
+                <div class="animated-icon" id="heart-icon"></div>
+                <div class="animated-icon" id="lungs-icon"></div>
+                <div class="animated-icon" id="temp-icon"></div>
+                <div class="text-sm">
+                    <div id="greeting" class="font-medium text-blue-300"></div>
+                    <div id="current-time" class="font-mono"></div>
+                </div>
+                <div class="relative h-10 w-10">
+                    <!-- Animated clock icon -->
+                    <i class="fas fa-clock absolute text-blue-400 text-xl"></i>
+                    <div id="second-hand" class="absolute top-1/2 left-1/2 w-4 h-0.5 bg-red-400 origin-left transform -translate-y-1/2"></div>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <span class="status-indicator status-active pulse-animation"></span>
+                <span>ThingSpeak Connected</span>
+                <div class="badge badge-lg badge-outline">
+                    <span class="text-blue-300">Online</span>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Summary Panel -->
+        <div class="card-glass p-6 mb-8 relative overflow-hidden">
+            <div class="animated-bg"></div>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold gradient-text">
+                    <i class="fas fa-chart-line mr-2"></i>Health Summary
+                </h2>
+                <div class="text-sm text-gray-400">
+                    Last updated: <span id="summary-update-time">Just now</span>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="summary-panel" style="border-color: #ef4444">
+                    <div class="summary-item">
+                        <span class="text-gray-400"><i class="fas fa-heart mr-2 text-red-400"></i>Heart Rate</span>
+                        <span id="summary-heart-rate" class="font-medium">-- bpm</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="text-gray-400">Status</span>
+                        <span id="summary-heart-rate-status" class="text-green-400">Normal</span>
+                    </div>
+                </div>
+                
+                <div class="summary-panel" style="border-color: #3b82f6">
+                    <div class="summary-item">
+                        <span class="text-gray-400"><i class="fas fa-lungs mr-2 text-blue-400"></i>SpO2</span>
+                        <span id="summary-spo2" class="font-medium">-- %</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="text-gray-400">Status</span>
+                        <span id="summary-spo2-status" class="text-green-400">Normal</span>
+                    </div>
+                </div>
+                
+                <div class="summary-panel" style="border-color: #f59e0b">
+                    <div class="summary-item">
+                        <span class="text-gray-400"><i class="fas fa-temperature-high mr-2 text-amber-400"></i>Body Temp</span>
+                        <span id="summary-body-temp" class="font-medium">-- °C</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="text-gray-400">Status</span>
+                        <span id="summary-body-temp-status" class="text-green-400">Normal</span>
+                    </div>
+                </div>
+                
+                <div class="summary-panel" style="border-color: #8b5cf6">
+                    <div class="summary-item">
+                        <span class="text-gray-400"><i class="fas fa-heartbeat mr-2 text-purple-400"></i>Blood Pressure</span>
+                        <span id="summary-bp" class="font-medium">--/-- mmHg</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="text-gray-400">Status</span>
+                        <span id="summary-bp-status" class="text-green-400">Normal</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Dashboard Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Heart Rate Card -->
+            <div class="metric-card card-glass p-6 relative overflow-hidden">
+                <div class="animated-bg"></div>
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-400 text-sm uppercase tracking-wider"><i class="fas fa-heart mr-2 text-red-400"></i>Heart Rate</p>
+                        <h2 class="value-display mt-1 text-red-400">
+                            <span id="heart-rate">--</span>
+                            <span class="unit-display">bpm</span>
+                        </h2>
+                    </div>
+                    <div class="radial-progress text-red-400" style="--value:75; --size:3.5rem; --thickness:6px;">
+                        <i class="fas fa-heart text-red-500 animate-pulse glow-red"></i>
+                    </div>
+                </div>
+                <div class="mt-4 h-24">
+                    <div class="chart-container" id="hr-chart-container">
+                        <canvas id="hr-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SpO2 Card -->
+            <div class="metric-card card-glass p-6 relative overflow-hidden">
+                <div class="animated-bg"></div>
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-400 text-sm uppercase tracking-wider"><i class="fas fa-lungs mr-2 text-blue-400"></i>Blood Oxygen</p>
+                        <h2 class="value-display mt-1 text-blue-400">
+                            <span id="spo2">--</span>
+                            <span class="unit-display">%</span>
+                        </h2>
+                    </div>
+                    <div class="radial-progress text-blue-400" style="--value:95; --size:3.5rem; --thickness:6px;">
+                        <i class="fas fa-lungs text-blue-500 glow-blue"></i>
+                    </div>
+                </div>
+                <div class="mt-4 h-24">
+                    <div class="chart-container" id="spo2-chart-container">
+                        <canvas id="spo2-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Body Temperature Card -->
+            <div class="metric-card card-glass p-6 relative overflow-hidden">
+                <div class="animated-bg"></div>
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-400 text-sm uppercase tracking-wider"><i class="fas fa-temperature-high mr-2 text-amber-400"></i>Body Temp</p>
+                        <h2 class="value-display mt-1 text-amber-400">
+                            <span id="body-temp">--</span>
+                            <span class="unit-display">°C</span>
+                        </h2>
+                    </div>
+                    <div class="radial-progress text-amber-400" style="--value:65; --size:3.5rem; --thickness:6px;">
+                        <i class="fas fa-temperature-high text-amber-500"></i>
+                    </div>
+                </div>
+                <div class="mt-4 h-24">
+                    <div class="chart-container" id="body-temp-chart-container">
+                        <canvas id="body-temp-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Room Temperature Card -->
+            <div class="metric-card card-glass p-6 relative overflow-hidden">
+                <div class="animated-bg"></div>
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-400 text-sm uppercase tracking-wider"><i class="fas fa-home mr-2 text-emerald-400"></i>Room Temp</p>
+                        <h2 class="value-display mt-1 text-emerald-400">
+                            <span id="room-temp">--</span>
+                            <span class="unit-display">°C</span>
+                        </h2>
+                    </div>
+                    <div class="radial-progress text-emerald-400" style="--value:85; --size:3.5rem; --thickness:6px;">
+                        <i class="fas fa-home text-emerald-500 glow-green"></i>
+                    </div>
+                </div>
+                <div class="mt-4 h-24">
+                    <div class="chart-container" id="room-temp-chart-container">
+                        <canvas id="room-temp-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ECG Visualization -->
+        <div class="card-glass p-6 lg:col-span-2 relative overflow-hidden">
+            <div class="animated-bg"></div>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold gradient-text">
+                    <i class="fas fa-heartbeat mr-2"></i>Electrocardiogram (ECG)
+                </h2>
+                <div class="flex items-center">
+                    <div class="flex items-center space-x-2 mr-4">
+                        <span class="text-sm text-gray-400">Signal Quality:</span>
+                        <span id="ecg-quality" class="badge badge-success">
+                            Excellent
+                        </span>
+                    </div>
+                    <label class="label cursor-pointer">
+                        <span class="label-text mr-2">Simulated</span> 
+                        <input type="checkbox" id="ecg-mode-toggle" class="toggle toggle-primary" checked />
+                        <span class="label-text ml-2">Real</span>
+                    </label>
+                </div>
+            </div>
+            <div class="h-64 bg-slate-900/50 rounded-lg p-4 relative">
+                <div class="ecg-line"></div>
+                <div class="ecg-wave"></div>
+                <div class="chart-container" id="ecg-chart-container">
+                    <div id="ecg-plotly-chart"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- AI Recommendations Panel -->
+        <div class="card-glass p-6 relative overflow-hidden">
+            <div class="animated-bg"></div>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold gradient-text">
+                    <i class="fas fa-robot mr-2"></i>AI Health Recommendations
+                </h2>
+                <div class="flex items-center space-x-2">
+                    <label class="label cursor-pointer">
+                        <span class="label-text mr-2"><i class="fas fa-volume-up text-blue-400"></i></span> 
+                        <input type="checkbox" id="tts-toggle" class="toggle toggle-primary" checked />
+                    </label>
+                    <button id="read-aloud-btn" class="btn btn-primary btn-sm">
+                        <i class="fas fa-play"></i>
+                        <span>Read Aloud</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div id="recommendations-container" class="space-y-3 max-h-96 overflow-y-auto pr-2">
+                <div class="p-4 bg-slate-800/50 rounded-lg">
+                    <p class="text-gray-400">No recommendations at this time. All vitals appear normal.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Health Insights Panel -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Blood Pressure Widget -->
+            <div class="card-glass p-6 relative overflow-hidden">
+                <div class="animated-bg"></div>
+                <h2 class="text-xl font-semibold gradient-text mb-4">
+                    <i class="fas fa-heartbeat mr-2"></i>Blood Pressure
+                </h2>
+                <div class="p-4 bg-slate-800/50 rounded-lg mb-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-medium text-gray-200 flex items-center">
+                            <i class="fas fa-heartbeat text-red-400 mr-2"></i>
+                            Current Reading
+                        </h3>
+                        <span id="bp-status" class="badge badge-success">
+                            --
+                        </span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-center">
+                            <p class="text-sm text-gray-400">Systolic</p>
+                            <p id="systolic-bp" class="text-2xl font-bold">--</p>
+                        </div>
+                        <div class="text-3xl text-gray-400">/</div>
+                        <div class="text-center">
+                            <p class="text-sm text-gray-400">Diastolic</p>
+                            <p id="diastolic-bp" class="text-2xl font-bold">--</p>
+                        </div>
+                        <span class="text-sm text-gray-400 self-end">mmHg</span>
+                    </div>
+                    
+                    <div class="h-40">
+                        <div class="chart-container chart-3d" id="bp-chart-container">
+                            <canvas id="bp-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Fall Detection Widget -->
+            <div class="card-glass p-6 relative overflow-hidden">
+                <div class="animated-bg"></div>
+                <h2 class="text-xl font-semibold gradient-text mb-4">
+                    <i class="fas fa-running mr-2"></i>Activity Monitoring
+                </h2>
+                <div class="p-4 bg-slate-800/50 rounded-lg mb-4">
+                    <h3 class="font-medium text-gray-200 flex items-center mb-3">
+                        <i class="fas fa-exclamation-triangle text-yellow-400 mr-2"></i>
+                        Fall Detection
+                    </h3>
+                    <p id="fall-status" class="text-xl font-bold text-green-400">No Fall Detected</p>
+                    <p class="text-sm text-gray-400">Last detected: <span id="fall-time">--</span></p>
+                </div>
+                
+                <!-- Stress Level Widget -->
+                <div class="p-4 bg-slate-800/50 rounded-lg">
+                    <h3 class="font-medium text-gray-200 flex items-center mb-3">
+                        <i class="fas fa-brain text-blue-400 mr-2"></i>
+                        Stress Level
+                    </h3>
+                    <p id="stress-status" class="text-xl font-bold text-green-400">Low Stress</p>
+                    <p class="text-sm text-gray-400">Last assessed: <span id="stress-time">--</span></p>
+                </div>
+            </div>
+            
+            <!-- Prediction History Widget -->
+            <div class="card-glass p-6 relative overflow-hidden">
+                <div class="animated-bg"></div>
+                <h2 class="text-xl font-semibold gradient-text mb-4">
+                    <i class="fas fa-history mr-2"></i>Prediction History
+                </h2>
+                <div class="prediction-history">
+                    <div class="history-item normal">
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium">Normal ECG</span>
+                            <span class="text-xs text-gray-400">Just now</span>
+                        </div>
+                        <p class="text-sm mt-1">Sinus rhythm detected with no abnormalities</p>
+                    </div>
+                    <div class="history-item warning">
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium">Possible Tachycardia</span>
+                            <span class="text-xs text-gray-400">5 mins ago</span>
+                        </div>
+                        <p class="text-sm mt-1">Elevated heart rate detected (112 bpm)</p>
+                    </div>
+                    <div class="history-item normal">
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium">Normal ECG</span>
+                            <span class="text-xs text-gray-400">15 mins ago</span>
+                        </div>
+                        <p class="text-sm mt-1">Regular sinus rhythm with normal intervals</p>
+                    </div>
+                    <div class="history-item critical">
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium">Arrhythmia Detected</span>
+                            <span class="text-xs text-gray-400">30 mins ago</span>
+                        </div>
+                        <p class="text-sm mt-1">Irregular heart rhythm detected - seek medical advice</p>
+                    </div>
+                    <div class="history-item normal">
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium">Normal ECG</span>
+                            <span class="text-xs text-gray-400">45 mins ago</span>
+                        </div>
+                        <p class="text-sm mt-1">No abnormalities detected in ECG signal</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Action Panel -->
+        <div class="card-glass p-6 mb-8 relative overflow-hidden">
+            <div class="animated-bg"></div>
+            <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+                <div class="flex items-center space-x-3">
+                    <div class="p-3 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-600/20">
+                        <i class="fas fa-history text-blue-400"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-400">Last Updated</p>
+                        <p id="last-updated" class="font-medium text-gray-200">Just now</p>
+                    </div>
+                </div>
+                
+                <div class="flex flex-wrap justify-center gap-3">
+                    <button id="refresh-btn" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i>
+                        <span>Refresh Data</span>
+                    </button>
+                    <button id="export-csv" class="btn btn-primary">
+                        <i class="fas fa-file-csv"></i>
+                        <span>Export CSV</span>
+                    </button>
+                    <button id="export-pdf" class="btn btn-primary">
+                        <i class="fas fa-file-pdf"></i>
+                        <span>Export PDF</span>
+                    </button>
+                    <button id="emergency-btn" class="btn btn-danger">
+                        <i class="fas fa-bell"></i>
+                        <span>Emergency Alert</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- System Information -->
+        <div class="card-glass p-6 mb-8 relative overflow-hidden">
+            <div class="animated-bg"></div>
+            <h2 class="text-xl font-semibold gradient-text mb-4">
+                <i class="fas fa-microchip mr-2"></i>System Status
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <!-- Sensor Status Cards -->
+                <div class="sensor-card p-4 bg-slate-800/50 rounded-lg hover:bg-slate-800/70 transition" style="border-color: #ef4444">
+                    <h3 class="font-medium text-gray-200 mb-2 flex items-center">
+                        <i class="fas fa-heartbeat text-red-400 mr-2"></i>
+                        Heart Rate & Spo2 Sensor
+                    </h3>
+                    <P id ="hr-spo2-sensor-name" class="text-sm text-green-400"> MAX30102</P>
+                    <p id="hr-spo2-sensor-status" class="text-sm text-green-400">Active</p>
+                    <p class="text-xs text-gray-400">Last checked: <span id="hr-spo2-sensor-time">--</span></p>
+                </div>
+                <div class="sensor-card p-4 bg-slate-800/50 rounded-lg hover:bg-slate-800/70 transition" style="border-color: #10b981">
+                    <h3 class="font-medium text-gray-200 mb-2 flex items-center">
+                        <i class="fas fa-home text-emerald-400 mr-2"></i>
+                        Room Temp Sensor
+                    </h3>
+                    <P id ="temp-sensor-name" class="text-sm text-green-400"> DHT11</P>
+                    <p id="temp-sensor-status" class="text-sm text-green-400">Active</p>
+                    <p class="text-xs text-gray-400">Last checked: <span id="temp-sensor-time">--</span></p>
+                </div>
+                <div class="sensor-card p-4 bg-slate-800/50 rounded-lg hover:bg-slate-800/70 transition" style="border-color: #f59e0b">
+                    <h3 class="font-medium text-gray-200 mb-2 flex items-center">
+                        <i class="fas fa-temperature-high text-amber-400 mr-2"></i>
+                        Body Temp Sensor
+                    </h3>
+                    <P id ="body-sensor-name" class="text-sm text-green-400"> DS18B20</P>
+                    <p id="body-temp-sensor-status" class="text-sm text-green-400">Active</p>
+                    <p class="text-xs text-gray-400">Last checked: <span id="body-temp-sensor-time">--</span></p>
+                </div>
+                <div class="sensor-card p-4 bg-slate-800/50 rounded-lg hover:bg-slate-800/70 transition" style="border-color: #8b5cf6">
+                    <h3 class="font-medium text-gray-200 mb-2 flex items-center">
+                        <i class="fas fa-heartbeat text-purple-400 mr-2"></i>
+                        ECG Sensor
+                    </h3>
+                    <P id ="ecg-sensor-name" class="text-sm text-green-400"> AD8232</P>
+                    <p id="ecg-sensor-status" class="text-sm text-green-400">Active</p>
+                    <p class="text-xs text-gray-400">Last checked: <span id="ecg-sensor-time">--</span></p>
+                </div>
+                <div class="sensor-card p-4 bg-slate-800/50 rounded-lg hover:bg-slate-800/70 transition" style="border-color: #3b82f6">
+                    <h3 class="font-medium text-gray-200 mb-2 flex items-center">
+                        <i class="fas fa-heartbeat text-blue-400 mr-2"></i>
+                       Motion Sensor
+                    </h3>
+                    <P id ="motion-sensor-name" class="text-sm text-green-400"> ADXL345</P>
+                    <p id="motion-sensor-status" class="text-sm text-green-400">Active</p>
+                    <p class="text-xs text-gray-400">Last checked: <span id="motion-sensor-time">--</span></p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <footer class="dashboard-footer text-center text-gray-400 text-sm py-6 rounded-xl">
+            <p>© 2025 SwasthAI Health Monitoring System</p>
+            <p class="mt-1">Developed with <i class="fas fa-heart text-red-500 pulse-animation"></i> for better healthcare</p>
+            <p class="mt-1">Under the guidance of Prof. Banoth Krishna </p>
+        </footer>
+    </div>
+
+    <!-- JavaScript Application -->
+    <script>
+        // Configuration
+        const config = {
+            thingSpeak: {
+                channelID: '2950991',
+                apiKey: 'JBOUTFQJNNCC3V19',
+                updateInterval: 5000, // 5 seconds for more real-time feel
+                fields: {
+                    heartRate: 1,
+                    spo2: 2,
+                    bodyTemp: 3,
+                    roomTemp: 4,
+                    ecg: 5,
+                    fallDetection: 6,
+                    bloodPressure: 7,
+                    riskLevel: 8,
+                    stressLevel: 9
+                }
+            },
+            thresholds: {
+                heartRate: { min: 60, max: 100 },
+                spo2: { min: 95 },
+                bodyTemp: { min: 36.5, max: 37.5 },
+                bloodPressure: {
+                    systolic: { normalMin: 90, normalMax: 120, warningMax: 140 },
+                    diastolic: { normalMin: 60, normalMax: 80, warningMax: 90 }
+                },
+                stressLevel: { normalMax: 50, warningMax: 70 }
+            },
+            medications: [
+                {
+                    name: "Metoprolol",
+                    dosage: "50mg",
+                    schedule: "08:00,20:00",
+                    lastTaken: null
+                },
+                {
+                    name: "Aspirin",
+                    dosage: "81mg",
+                    schedule: "08:00",
+                    lastTaken: null
+                }
+            ],
+            ecgSimulation: {
+                duration: 10, // seconds
+                sampleRate: 250, // samples per second
+                amplitude: 1.5 // mV
+            }
+        };
+        
+        // Application State
+        const state = {
+            charts: {
+                heartRate: null,
+                spo2: null,
+                bodyTemp: null,
+                roomTemp: null,
+                ecg: null,
+                bloodPressure: null
+            },
+            data: {
+                heartRate: [],
+                spo2: [],
+                bodyTemp: [],
+                roomTemp: [],
+                ecg: [],
+                bloodPressure: [],
+                fallDetection: [],
+                riskLevel: [],
+                stressLevel: []
+            },
+            lastUpdate: null,
+            ttsService: null,
+            ttsEnabled: true,
+            ecgMode: 'real', // 'real' or 'simulated'
+            predictionHistory: [],
+            maxDataPoints: 20, // Number of data points to keep in memory
+            fabOpen: false
+        };
+        
+        // DOM Elements
+        const elements = {
+            time: {
+                current: document.getElementById('current-time'),
+                lastUpdated: document.getElementById('last-updated'),
+                summaryUpdate: document.getElementById('summary-update-time')
+            },
+            metrics: {
+                heartRate: document.getElementById('heart-rate'),
+                spo2: document.getElementById('spo2'),
+                bodyTemp: document.getElementById('body-temp'),
+                roomTemp: document.getElementById('room-temp'),
+                systolicBP: document.getElementById('systolic-bp'),
+                diastolicBP: document.getElementById('diastolic-bp'),
+                bpStatus: document.getElementById('bp-status'),
+                fallStatus: document.getElementById('fall-status'),
+                fallTime: document.getElementById('fall-time'),
+                stressStatus: document.getElementById('stress-status'),
+                stressTime: document.getElementById('stress-time')
+            },
+            summary: {
+                heartRate: document.getElementById('summary-heart-rate'),
+                heartRateStatus: document.getElementById('summary-heart-rate-status'),
+                spo2: document.getElementById('summary-spo2'),
+                spo2Status: document.getElementById('summary-spo2-status'),
+                bodyTemp: document.getElementById('summary-body-temp'),
+                bodyTempStatus: document.getElementById('summary-body-temp-status'),
+                bp: document.getElementById('summary-bp'),
+                bpStatus: document.getElementById('summary-bp-status')
+            },
+            buttons: {
+                refresh: document.getElementById('refresh-btn'),
+                exportCSV: document.getElementById('export-csv'),
+                exportPDF: document.getElementById('export-pdf'),
+                emergency: document.getElementById('emergency-btn'),
+                ttsToggle: document.getElementById('tts-toggle'),
+                readAloud: document.getElementById('read-aloud-btn'),
+                ecgModeToggle: document.getElementById('ecg-mode-toggle')
+            },
+            containers: {
+                recommendations: document.getElementById('recommendations-container'),
+                hrChart: document.getElementById('hr-chart-container'),
+                spo2Chart: document.getElementById('spo2-chart-container'),
+                bodyTempChart: document.getElementById('body-temp-chart-container'),
+                roomTempChart: document.getElementById('room-temp-chart-container'),
+                ecgChart: document.getElementById('ecg-chart-container'),
+                bpChart: document.getElementById('bp-chart-container'),
+                ecgPlotly: document.getElementById('ecg-plotly-chart')
+            },
+            fab: {
+                main: document.getElementById('fab-main'),
+                menu: document.getElementById('fab-menu')
+            }
+        };
+         
+        // Initialize Application
+        function init() {
+            setupEventListeners();
+            updateClock();
+            initializeTTS();
+            initializeECG();
+            createParticles();
+            initializeLottieAnimations();
+            fetchData();
+            
+            // Set up periodic data refresh
+            setInterval(fetchData, config.thingSpeak.updateInterval);
+        }
+        
+        // Initialize Lottie animations
+        function initializeLottieAnimations() {
+            if (window.lottie) {
+                lottie.loadAnimation({
+                    container: document.getElementById('heart-icon'),
+                    path: 'https://assets9.lottiefiles.com/packages/lf20_5tkzkblw.json',
+                    renderer: 'svg',
+                    loop: true,
+                    autoplay: true
+                });
+                
+                lottie.loadAnimation({
+                    container: document.getElementById('lungs-icon'),
+                    path: 'https://assets1.lottiefiles.com/packages/lf20_ua1atx.json',
+                    renderer: 'svg',
+                    loop: true,
+                    autoplay: true
+                });
+                
+                lottie.loadAnimation({
+                    container: document.getElementById('temp-icon'),
+                    path: 'https://assets1.lottiefiles.com/packages/lf20_gn0tojcq.json',
+                    renderer: 'svg',
+                    loop: true,
+                    autoplay: true
+                });
+            }
+        }
+        
+        // Create floating particles
+        function createParticles() {
+            const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b'];
+            const container = document.getElementById('particles-js');
+            
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                
+                // Random size between 1px and 3px
+                const size = Math.random() * 2 + 1;
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                
+                // Random color
+                particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                
+                // Random position
+                particle.style.left = `${Math.random() * 100}vw`;
+                particle.style.top = `${Math.random() * 100}vh`;
+                
+                // Random animation
+                const duration = Math.random() * 20 + 10;
+                particle.style.animation = `float ${duration}s linear infinite`;
+                
+                // Random delay
+                particle.style.animationDelay = `${Math.random() * 20}s`;
+                
+                container.appendChild(particle);
+            }
+        }
+        
+        // Set up event listeners
+        function setupEventListeners() {
+            elements.buttons.refresh.addEventListener('click', fetchData);
+            elements.buttons.exportCSV.addEventListener('click', exportDataAsCSV);
+            elements.buttons.exportPDF.addEventListener('click', exportDataAsPDF);
+            elements.buttons.emergency.addEventListener('click', triggerEmergencyAlert);
+            elements.buttons.ttsToggle.addEventListener('change', toggleTTS);
+            elements.buttons.readAloud.addEventListener('click', readRecommendationsAloud);
+            elements.buttons.ecgModeToggle.addEventListener('change', toggleECGMode);
+            
+            // Floating action button
+            elements.fab.main.addEventListener('click', toggleFabMenu);
+            
+            // Add chart click handlers
+            setupChartClickHandlers();
+        }
+        
+        function toggleFabMenu() {
+            state.fabOpen = !state.fabOpen;
+            if (state.fabOpen) {
+                elements.fab.menu.classList.add('open');
+                elements.fab.main.innerHTML = '<i class="fas fa-times text-xl"></i>';
+
+                // Show group member names inside the FAB menu
+                elements.fab.menu.innerHTML = `
+                    <div class="p-2 bg-black rounded shadow">
+                        <p>Group Members:</p>
+                        <ul class="list-disc pl-4">
+                            <li>Manash</li>
+                            <li>Ashraful</li>
+                            <li>Abujaid</li>
+                            <li>Dhitiman</li>
+                        </ul>
+                    </div>
+                `;
+            } else {
+                elements.fab.menu.classList.remove('open');
+                elements.fab.main.innerHTML = '<i class="fas fa-plus text-xl"></i>';
+
+                // Clear menu content when closed
+                elements.fab.menu.innerHTML = '';
+            }
+        }
+        
+        // Initialize ECG visualization
+        function initializeECG() {
+            // Generate initial simulated ECG data
+            if (state.ecgMode === 'simulated') {
+                generateSimulatedECG();
+            }
+            
+            // Initialize Plotly ECG chart
+            const layout = {
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                margin: { t: 0, b: 20, l: 40, r: 20 },
+                xaxis: {
+                    showgrid: true,
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#e2e8f0',
+                    title: 'Time (s)'
+                },
+                yaxis: {
+                    showgrid: true,
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    color: '#e2e8f0',
+                    title: 'Voltage (mV)'
+                }
+            };
+            
+            Plotly.newPlot(elements.containers.ecgPlotly, [], layout, { displayModeBar: false });
+        }
+        
+        // Toggle between real and simulated ECG modes
+        function toggleECGMode(e) {
+            state.ecgMode = e.target.checked ? 'real' : 'simulated';
+            updateECGChart();
+        }
+        
+        // Generate simulated ECG data
+        function generateSimulatedECG() {
+            const { duration, sampleRate, amplitude } = config.ecgSimulation;
+            const data = [];
+            const totalSamples = duration * sampleRate;
+            
+            for (let i = 0; i < totalSamples; i++) {
+                const t = i / sampleRate;
+                const x = t % 1.0; // Repeat every 1 second
+                
+                // ECG waveform components
+                let y = 0;
+                
+                // P wave
+                if (x > 0.1 && x < 0.2) {
+                    y += amplitude * 0.25 * Math.sin(Math.PI * (x - 0.1) / 0.1);
+                }
+                
+                // QRS complex
+                if (x > 0.2 && x < 0.3) {
+                    // Q wave
+                    if (x < 0.22) {
+                        y -= amplitude * 0.5 * (x - 0.2) / 0.02;
+                    }
+                    // R wave
+                    else if (x < 0.25) {
+                        y += amplitude * (x - 0.22) / 0.03;
+                    }
+                    // S wave
+                    else {
+                        y -= amplitude * 0.5 * (x - 0.25) / 0.05;
+                    }
+                }
+                
+                // T wave
+                if (x > 0.3 && x < 0.4) {
+                    y += amplitude * 0.3 * Math.sin(Math.PI * (x - 0.3) / 0.1);
+                }
+                
+                // Baseline wander
+                y += amplitude * 0.05 * Math.sin(2 * Math.PI * t / 5);
+                
+                // Add some noise
+                y += amplitude * 0.02 * (Math.random() - 0.5);
+                
+                data.push({
+                    x: t,
+                    y: y
+                });
+            }
+            
+            state.data.ecg = data;
+        }     
+        // Setup chart click handlers
+        function setupChartClickHandlers() {
+            elements.containers.hrChart.addEventListener('click', () => showChartDetails('heartRate'));
+            elements.containers.spo2Chart.addEventListener('click', () => showChartDetails('spo2'));
+            elements.containers.bodyTempChart.addEventListener('click', () => showChartDetails('bodyTemp'));
+            elements.containers.roomTempChart.addEventListener('click', () => showChartDetails('roomTemp'));
+            elements.containers.ecgChart.addEventListener('click', () => showChartDetails('ecg'));
+            elements.containers.bpChart.addEventListener('click', () => showChartDetails('bloodPressure'));
+        }      
+        // Show chart details on click
+        function showChartDetails(metric) {
+            const chart = state.charts[metric];
+            if (chart) {
+                const latestData = chart.data.datasets[0].data;
+                const latestValue = latestData[latestData.length - 1];
+                showNotification(`Latest ${metric} value: ${latestValue.y}`, 'info');
+            } else {
+                showNotification(`No data available for ${metric}`, 'warning');
+            }
+        }      
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.style.right = '20px';
+            notification.style.top = '20px';
+            notification.style.zIndex = '1000';           
+            let icon = '';
+            switch(type) {
+                case 'success': icon = 'fa-check-circle'; break;
+                case 'error': icon = 'fa-exclamation-circle'; break;
+                case 'warning': icon = 'fa-exclamation-triangle'; break;
+                default: icon = 'fa-info-circle';
+            }
+            
+            notification.innerHTML = `
+                <i class="fas ${icon}"></i>
+                <span>${message}</span>
+            `;           
+            document.body.appendChild(notification);
+            
+            // Remove notification after 3 seconds
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }      
+        // Initialize Text-to-Speech
+        function initializeTTS() {
+            if ('speechSynthesis' in window) {
+                state.ttsService = new TTSService();
+                window.speechSynthesis.onvoiceschanged = function() {
+                    if (state.ttsService) {
+                        state.ttsService.loadVoices();
+                    }
+                };
+            } else {
+                showNotification('Text-to-speech not supported in this browser', 'warning');
+                elements.buttons.ttsToggle.disabled = true;
+                elements.buttons.readAloud.disabled = true;
+            }
+        }     
+        // Toggle TTS on/off
+        function toggleTTS(e) {
+            state.ttsEnabled = e.target.checked;
+            showNotification(`Text-to-speech ${state.ttsEnabled ? 'enabled' : 'disabled'}`, 'success');
+        }       
+        // Read recommendations aloud
+        function readRecommendationsAloud() {
+            if (state.ttsService) {
+                const recommendations = generateAIRecommendations();
+                state.ttsService.announceRecommendations(recommendations);
+            } else {
+                showNotification('TTS service not available', 'error');
+            }
+        }       
+        // Update clock display
+        function updateClock() {
+            const now = new Date();
+            const hours = now.getHours();         
+            // Dynamic greeting
+            let greeting;
+            if (hours < 12) greeting = "Good Morning Manash ";
+            else if (hours < 18) greeting = "Good Afternoon Manash";
+            else greeting = "Good Evening Manash";
+            
+            document.getElementById('greeting').textContent = greeting + ',';
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            });         
+            // Sync second hand
+            const seconds = now.getSeconds();
+            document.getElementById('second-hand').style.transform = 
+                `translateY(-50%) rotate(${seconds * 6}deg)`;
+            
+            setTimeout(updateClock, 1000);
+        }
+        
+        // Fetch data from ThingSpeak
+        async function fetchData() {
+            try {
+                const url = `https://api.thingspeak.com/channels/${config.thingSpeak.channelID}/feeds.json?api_key=${config.thingSpeak.apiKey}&results=${state.maxDataPoints}`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                processData(data.feeds);
+                updateUI();
+                
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                showNotification('Failed to fetch data. Please check connection.', 'error');
+            }
+        }
+        
+        // Process fetched data
+        function processData(feeds) {
+            // Reset data arrays
+            Object.keys(state.data).forEach(key => state.data[key] = []);
+            
+            feeds.forEach(feed => {
+                const timestamp = new Date(feed.created_at).getTime();
+                
+                // Process each metric
+                if (feed.field1) state.data.heartRate.push({ x: timestamp, y: parseFloat(feed.field1) });
+                if (feed.field2) state.data.spo2.push({ x: timestamp, y: parseFloat(feed.field2) });
+                if (feed.field3) state.data.bodyTemp.push({ x: timestamp, y: parseFloat(feed.field3) });
+                if (feed.field4) state.data.roomTemp.push({ x: timestamp, y: parseFloat(feed.field4) });
+                if (feed.field5) state.data.ecg.push({ x: timestamp, y: parseFloat(feed.field5) });
+                
+                // Process blood pressure (format: "120/80")
+                if (feed.field7) {
+                    const [systolic, diastolic] = feed.field7.split('/').map(Number);
+                    if (!isNaN(systolic) && !isNaN(diastolic)) {
+                        state.data.bloodPressure.push({
+                            x: timestamp,
+                            systolic: systolic,
+                            diastolic: diastolic
+                        });
+                    }
+                }
+                
+                // Process other fields
+                if (feed.field6) state.data.fallDetection.push({ x: timestamp, y: parseFloat(feed.field6) });
+                if (feed.field8) state.data.riskLevel.push({ x: timestamp, y: parseFloat(feed.field8) });
+                if (feed.field9) state.data.stressLevel.push({ x: timestamp, y: parseFloat(feed.field9) });
+            });
+            
+            state.lastUpdate = new Date();
+        }
+        
+        // Update UI with current data
+        function updateUI() {
+            // Update metric displays with animation when values change
+            if (state.data.heartRate.length > 0) {
+                const latest = state.data.heartRate[state.data.heartRate.length - 1];
+                animateValueChange(elements.metrics.heartRate, latest.y);
+                elements.summary.heartRate.textContent = `${latest.y} bpm`;
+                updateSummaryStatus('heartRate', latest.y);
+                
+                // Update radial progress
+                const hrProgress = document.querySelector('.radial-progress.text-red-400');
+                if (hrProgress) {
+                    const hrValue = Math.min(Math.max(latest.y, 40), 140);
+                    const progress = ((hrValue - 40) / 100) * 100;
+                    hrProgress.style.setProperty('--value', progress);
+                }
+            }
+            
+            if (state.data.spo2.length > 0) {
+                const latest = state.data.spo2[state.data.spo2.length - 1];
+                animateValueChange(elements.metrics.spo2, latest.y);
+                elements.summary.spo2.textContent = `${latest.y} %`;
+                updateSummaryStatus('spo2', latest.y);
+                
+                // Update radial progress
+                const spo2Progress = document.querySelector('.radial-progress.text-blue-400');
+                if (spo2Progress) {
+                    spo2Progress.style.setProperty('--value', latest.y);
+                }
+            }
+            
+            if (state.data.bodyTemp.length > 0) {
+                const latest = state.data.bodyTemp[state.data.bodyTemp.length - 1];
+                animateValueChange(elements.metrics.bodyTemp, latest.y);
+                elements.summary.bodyTemp.textContent = `${latest.y} °C`;
+                updateSummaryStatus('bodyTemp', latest.y);
+                
+                // Update radial progress
+                const tempProgress = document.querySelector('.radial-progress.text-amber-400');
+                if (tempProgress) {
+                    const tempValue = Math.min(Math.max((latest.y - 35) * 20, 0), 100);
+                    tempProgress.style.setProperty('--value', tempValue);
+                }
+            }
+            
+            if (state.data.roomTemp.length > 0) {
+                const latest = state.data.roomTemp[state.data.roomTemp.length - 1];
+                animateValueChange(elements.metrics.roomTemp, latest.y);
+                
+                // Update radial progress
+                const roomTempProgress = document.querySelector('.radial-progress.text-emerald-400');
+                if (roomTempProgress) {
+                    const roomTempValue = Math.min(Math.max((latest.y - 15) * 5, 0), 100);
+                    roomTempProgress.style.setProperty('--value', roomTempValue);
+                }
+            }
+            
+            // Update blood pressure
+            if (state.data.bloodPressure.length > 0) {
+                const latestBP = state.data.bloodPressure[state.data.bloodPressure.length - 1];
+                animateValueChange(elements.metrics.systolicBP, latestBP.systolic);
+                animateValueChange(elements.metrics.diastolicBP, latestBP.diastolic);
+                elements.summary.bp.textContent = `${latestBP.systolic}/${latestBP.diastolic} mmHg`;
+                updateBPStatus(latestBP.systolic, latestBP.diastolic);
+                updateSummaryBPStatus(latestBP.systolic, latestBP.diastolic);
+            }
+            
+            // Update fall detection
+            if (state.data.fallDetection.length > 0) {
+                const latestFall = state.data.fallDetection[state.data.fallDetection.length - 1];
+                if (latestFall.y === 1) {
+                    elements.metrics.fallStatus.textContent = 'Fall Detected!';
+                    elements.metrics.fallStatus.className = 'text-xl font-bold text-red-400';
+                    elements.metrics.fallTime.textContent = new Date(latestFall.x).toLocaleTimeString();
+                    
+                    // Flash the fall status
+                    gsap.to(elements.metrics.fallStatus, {
+                        duration: 0.5,
+                        color: '#ffffff',
+                        backgroundColor: '#ef4444',
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '0.25rem',
+                        yoyo: true,
+                        repeat: 3
+                    });
+                }
+            }
+            
+            // Update stress level
+            if (state.data.stressLevel.length > 0) {
+                const latestStress = state.data.stressLevel[state.data.stressLevel.length - 1];
+                if (latestStress.y > config.thresholds.stressLevel.warningMax) {
+                    elements.metrics.stressStatus.textContent = 'High Stress';
+                    elements.metrics.stressStatus.className = 'text-xl font-bold text-red-400';
+                } else if (latestStress.y > config.thresholds.stressLevel.normalMax) {
+                    elements.metrics.stressStatus.textContent = 'Moderate Stress';
+                    elements.metrics.stressStatus.className = 'text-xl font-bold text-yellow-400';
+                } else {
+                    elements.metrics.stressStatus.textContent = 'Low Stress';
+                    elements.metrics.stressStatus.className = 'text-xl font-bold text-green-400';
+                }
+                elements.metrics.stressTime.textContent = new Date(latestStress.x).toLocaleTimeString();
+            }
+            
+            // Update charts
+            updateCharts();
+            
+            // Generate and display AI recommendations
+            const recommendations = generateAIRecommendations();
+            displayRecommendations(recommendations);
+            
+            // Update prediction history
+            updatePredictionHistory();
+        }
+        
+        // Animate value changes
+        function animateValueChange(element, newValue) {
+            if (element.textContent !== newValue.toString()) {
+                element.classList.add('value-change');
+                element.textContent = newValue;
+                setTimeout(() => {
+                    element.classList.remove('value-change');
+                }, 500);
+            }
+        }
+        
+        // Update summary panel status indicators
+        function updateSummaryStatus(metric, value) {
+            let element, status, normalRange;
+            
+            switch(metric) {
+                case 'heartRate':
+                    element = elements.summary.heartRateStatus;
+                    normalRange = config.thresholds.heartRate;
+                    status = (value < normalRange.min || value > normalRange.max) ? 'warning' : 'normal';
+                    break;
+                case 'spo2':
+                    element = elements.summary.spo2Status;
+                    normalRange = config.thresholds.spo2;
+                    status = (value < normalRange.min) ? 'warning' : 'normal';
+                    break;
+                case 'bodyTemp':
+                    element = elements.summary.bodyTempStatus;
+                    normalRange = config.thresholds.bodyTemp;
+                    status = (value < normalRange.min || value > normalRange.max) ? 'warning' : 'normal';
+                    break;
+                default:
+                    return;
+            }
+            
+            if (status === 'warning') {
+                element.textContent = 'Warning';
+                element.className = 'text-yellow-400';
+                gsap.to(element, { 
+                    scale: 1.1, 
+                    duration: 0.3, 
+                    yoyo: true, 
+                    repeat: 1 
+                });
+            } else {
+                element.textContent = 'Normal';
+                element.className = 'text-green-400';
+            }
+        }
+        
+        // Update summary BP status
+        function updateSummaryBPStatus(systolic, diastolic) {
+            const element = elements.summary.bpStatus;
+            const { normalMin, normalMax, warningMax } = config.thresholds.bloodPressure.systolic;
+            const diast = config.thresholds.bloodPressure.diastolic;
+            
+            if (systolic >= warningMax || diastolic >= diast.warningMax) {
+                element.textContent = 'High';
+                element.className = 'text-red-400';
+                gsap.to(element, { 
+                    scale: 1.1, 
+                    duration: 0.3, 
+                    yoyo: true, 
+                    repeat: 1 
+                });
+            } else if (systolic <= normalMin || diastolic <= diast.normalMin) {
+                element.textContent = 'Low';
+                element.className = 'text-blue-400';
+            } else {
+                element.textContent = 'Normal';
+                element.className = 'text-green-400';
+            }
+        }
+        
+        // Update blood pressure status
+        function updateBPStatus(systolic, diastolic) {
+            const { normalMin, normalMax, warningMax } = config.thresholds.bloodPressure.systolic;
+            const diast = config.thresholds.bloodPressure.diastolic;
+            
+            if (systolic >= warningMax || diastolic >= diast.warningMax) {
+                elements.metrics.bpStatus.textContent = 'High';
+                elements.metrics.bpStatus.className = 'badge badge-error';
+                gsap.to(elements.metrics.bpStatus, { 
+                    scale: 1.1, 
+                    duration: 0.3, 
+                    yoyo: true, 
+                    repeat: 1 
+                });
+            } else if (systolic <= normalMin || diastolic <= diast.normalMin) {
+                elements.metrics.bpStatus.textContent = 'Low';
+                elements.metrics.bpStatus.className = 'badge badge-info';
+            } else {
+                elements.metrics.bpStatus.textContent = 'Normal';
+                elements.metrics.bpStatus.className = 'badge badge-success';
+            }
+        }
+        
+        // Update prediction history
+        function updatePredictionHistory() {
+            // In a real implementation, this would come from your AI model's predictions
+            // For demo purposes, we'll simulate some predictions based on the data
+            
+            if (state.data.heartRate.length > 0) {
+                const latestHR = state.data.heartRate[state.data.heartRate.length - 1].y;
+                const now = new Date();
+                
+                // Simulate different prediction scenarios
+                let prediction;
+                let status = 'normal';
+                
+                if (latestHR > 110) {
+                    prediction = {
+                        type: "Possible Tachycardia",
+                        message: `Elevated heart rate detected (${latestHR} bpm)`,
+                        timestamp: now
+                    };
+                    status = 'warning';
+                } else if (latestHR < 50) {
+                    prediction = {
+                        type: "Possible Bradycardia",
+                        message: `Low heart rate detected (${latestHR} bpm)`,
+                        timestamp: now
+                    };
+                    status = 'critical';
+                } else {
+                    prediction = {
+                        type: "Normal ECG",
+                        message: "Sinus rhythm detected with no abnormalities",
+                        timestamp: now
+                    };
+                    status = 'normal';
+                }
+                
+                // Add to history if it's new or different from last prediction
+                if (state.predictionHistory.length === 0 || 
+                    state.predictionHistory[0].type !== prediction.type) {
+                    state.predictionHistory.unshift(prediction);
+                    
+                    // Keep only the last 10 predictions
+                    if (state.predictionHistory.length > 10) {
+                        state.predictionHistory.pop();
+                    }
+                }
+            }
+        }
+        
+        // Initialize and update charts
+        function updateCharts() {
+            // Initialize or update each chart
+            if (!state.charts.heartRate) {
+                state.charts.heartRate = createChart('hr-chart', state.data.heartRate, 'Heart Rate (bpm)', 'rgba(239, 68, 68, 0.7)');
+            } else {
+                updateChartData(state.charts.heartRate, state.data.heartRate);
+            }
+            
+            if (!state.charts.spo2) {
+                state.charts.spo2 = createChart('spo2-chart', state.data.spo2, 'SpO2 (%)', 'rgba(37, 99, 235, 0.7)');
+            } else {
+                updateChartData(state.charts.spo2, state.data.spo2);
+            }
+            
+            if (!state.charts.bodyTemp) {
+                state.charts.bodyTemp = createChart('body-temp-chart', state.data.bodyTemp, 'Body Temperature (°C)', 'rgba(249, 115, 22, 0.7)');
+            } else {
+                updateChartData(state.charts.bodyTemp, state.data.bodyTemp);
+            }
+            
+            if (!state.charts.roomTemp) {
+                state.charts.roomTemp = createChart('room-temp-chart', state.data.roomTemp, 'Room Temperature (°C)', 'rgba(34, 197, 94, 0.7)');
+            } else {
+                updateChartData(state.charts.roomTemp, state.data.roomTemp);
+            }
+            
+            // Update ECG chart based on current mode
+            updateECGChart();
+            
+            // Blood Pressure Chart
+            if (state.data.bloodPressure.length > 0) {
+                const bpData = {
+                    systolic: state.data.bloodPressure.map(d => ({ x: d.x, y: d.systolic })),
+                    diastolic: state.data.bloodPressure.map(d => ({ x: d.x, y: d.diastolic }))
+                };
+                
+                if (!state.charts.bloodPressure) {
+                    state.charts.bloodPressure = createBPChart('bp-chart', bpData);
+                } else {
+                    updateBPChartData(state.charts.bloodPressure, bpData);
+                }
+            }
+        }
+        
+        // Update ECG chart based on current mode
+        function updateECGChart() {
+            if (state.ecgMode === 'simulated') {
+                generateSimulatedECG();
+            }
+            
+            // Prepare data for Plotly
+            const ecgData = state.ecgMode === 'simulated' ? 
+                state.data.ecg : 
+                (state.data.ecg.length > 0 ? state.data.ecg : []);
+            
+            if (ecgData.length > 0) {
+                const trace = {
+                    x: ecgData.map(point => point.x / 1000), // Convert ms to seconds
+                    y: ecgData.map(point => point.y),
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: '#8b5cf6', width: 1.5 },
+                    name: 'ECG Signal'
+                };
+                
+                const layout = {
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    margin: { t: 0, b: 20, l: 40, r: 20 },
+                    xaxis: {
+                        showgrid: true,
+                        gridcolor: 'rgba(255,255,255,0.1)',
+                        color: '#e2e8f0',
+                        title: 'Time (s)'
+                    },
+                    yaxis: {
+                        showgrid: true,
+                        gridcolor: 'rgba(255,255,255,0.1)',
+                        color: '#e2e8f0',
+                        title: 'Voltage (mV)'
+                    }
+                };
+                
+                Plotly.react(elements.containers.ecgPlotly, [trace], layout);
+            }
+        }
+        
+        // Create a chart
+        function createChart(canvasId, data, label, color) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: label,
+                        data: data,
+                        borderColor: color,
+                        backgroundColor: color.replace('0.7', '0.2'),
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: {
+                                color: '#e2e8f0'
+                            }
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleColor: '#e2e8f0',
+                            bodyColor: '#e2e8f0',
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'minute',
+                                displayFormats: {
+                                    minute: 'HH:mm'
+                                }
+                            },
+                            ticks: {
+                                color: '#e2e8f0'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: '#e2e8f0'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+        }
+        
+        // Create blood pressure chart
+        function createBPChart(canvasId, data) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Systolic BP',
+                            data: data.systolic,
+                            borderColor: 'rgba(220, 38, 38, 0.7)',
+                            backgroundColor: 'rgba(220, 38, 38, 0.2)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 5
+                        },
+                        {
+                            label: 'Diastolic BP',
+                            data: data.diastolic,
+                            borderColor: 'rgba(99, 102, 241, 0.7)',
+                            backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 5
+                        }
+                    ]
+                },
+                options: getChartOptions('Blood Pressure (mmHg)')
+            });
+        }
+        
+        // Chart configuration
+        function getChartOptions(title) {
+            return {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: title !== 'ECG Signal',
+                        labels: {
+                            color: '#e2e8f0'
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleColor: '#e2e8f0',
+                        bodyColor: '#e2e8f0',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'minute',
+                            displayFormats: {
+                                minute: 'HH:mm'
+                            }
+                        },
+                        ticks: {
+                            color: '#e2e8f0'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            color: '#e2e8f0'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            };
+        }
+        
+        // Update chart data
+        function updateChartData(chart, newData) {
+            chart.data.datasets[0].data = newData;
+            chart.update();
+        }
+        
+        // Update BP chart data
+        function updateBPChartData(chart, newData) {
+            chart.data.datasets[0].data = newData.systolic;
+            chart.data.datasets[1].data = newData.diastolic;
+            chart.update();
+        }
+
+        // Generate AI recommendations based on current data
+        function generateAIRecommendations() {
+            try {
+                const recommendations = [];
+                const now = new Date();
+                
+                // Get latest readings
+                const latestHR = state.data.heartRate.length > 0 ? 
+                    state.data.heartRate[state.data.heartRate.length - 1].y : null;
+                const latestSpO2 = state.data.spo2.length > 0 ? 
+                    state.data.spo2[state.data.spo2.length - 1].y : null;
+                const latestBP = state.data.bloodPressure.length > 0 ? 
+                    state.data.bloodPressure[state.data.bloodPressure.length - 1] : null;
+                const latestTemp = state.data.bodyTemp.length > 0 ? 
+                    state.data.bodyTemp[state.data.bodyTemp.length - 1].y : null;
+                const latestStress = state.data.stressLevel.length > 0 ? 
+                    state.data.stressLevel[state.data.stressLevel.length - 1].y : null;
+                const latestFall = state.data.fallDetection.length > 0 ? 
+                    state.data.fallDetection[state.data.fallDetection.length - 1].y : null;
+                
+                // Heart rate analysis
+                if (latestHR) {
+                    if (latestHR > config.thresholds.heartRate.max) {
+                        recommendations.push({
+                            type: 'warning',
+                            message: 'Elevated heart rate detected',
+                            suggestion: `Current heart rate (${latestHR}bpm) is above normal range. Recommend rest and hydration. If persistent, consult a physician.`
+                        });
+                    } else if (latestHR < config.thresholds.heartRate.min) {
+                        recommendations.push({
+                            type: 'warning',
+                            message: 'Low heart rate detected',
+                            suggestion: `Current heart rate (${latestHR}bpm) is below normal range. If experiencing dizziness or fatigue, seek medical attention.`
+                        });
+                    }
+                }
+                
+                // SpO2 analysis
+                if (latestSpO2 && latestSpO2 < config.thresholds.spo2.min) {
+                    recommendations.push({
+                        type: 'critical',
+                        message: 'Low blood oxygen level',
+                        suggestion: `Current SpO2 (${latestSpO2}%) is below normal. Check sensor placement. If reading is accurate, seek immediate medical attention.`
+                    });
+                }
+                
+                // Blood pressure analysis
+                if (latestBP) {
+                    if (latestBP.systolic > config.thresholds.bloodPressure.systolic.warningMax || 
+                        latestBP.diastolic > config.thresholds.bloodPressure.diastolic.warningMax) {
+                        recommendations.push({
+                            type: 'critical',
+                            message: 'High blood pressure detected',
+                            suggestion: `Current BP (${latestBP.systolic}/${latestBP.diastolic} mmHg) is elevated. Rest and relax. If symptoms persist, consult a physician.`
+                        });
+                    } else if (latestBP.systolic < config.thresholds.bloodPressure.systolic.normalMin || 
+                              latestBP.diastolic < config.thresholds.bloodPressure.diastolic.normalMin) {
+                        recommendations.push({
+                            type: 'warning',
+                            message: 'Low blood pressure detected',
+                            suggestion: `Current BP (${latestBP.systolic}/${latestBP.diastolic} mmHg) is below normal. Ensure proper hydration.`
+                        });
+                    }
+                }
+                
+                // Temperature analysis
+                if (latestTemp) {
+                    if (latestTemp > config.thresholds.bodyTemp.max) {
+                        recommendations.push({
+                            type: 'warning',
+                            message: 'Elevated body temperature',
+                            suggestion: `Current temperature (${latestTemp}°C) suggests fever. Rest and hydrate. Monitor for other symptoms.`
+                        });
+                    } else if (latestTemp < config.thresholds.bodyTemp.min) {
+                        recommendations.push({
+                            type: 'warning',
+                            message: 'Low body temperature',
+                            suggestion: `Current temperature (${latestTemp}°C) is below normal. Ensure proper warmth and check environment.`
+                        });
+                    }
+                }
+                
+                // Stress level analysis
+                if (latestStress) {
+                    if (latestStress > config.thresholds.stressLevel.warningMax) {
+                        recommendations.push({
+                            type: 'warning',
+                            message: 'High stress level detected',
+                            suggestion: 'Consider relaxation techniques like deep breathing or meditation. Prolonged stress can impact health.'
+                        });
+                    } else if (latestStress > config.thresholds.stressLevel.normalMax) {
+                        recommendations.push({
+                            type: 'suggestion',
+                            message: 'Moderate stress level detected',
+                            suggestion: 'Take a short break. Gentle exercise or a walk may help reduce stress.'
+                        });
+                    }
+                }
+                
+                // Fall detection
+                if (latestFall === 1) {
+                    recommendations.push({
+                        type: 'critical',
+                        message: 'Fall detected!',
+                        suggestion: 'Potential fall detected. Please check on the patient immediately.'
+                    });
+                }
+
+                // Medication reminders
+                const currentTime = now.getHours() * 60 + now.getMinutes();
+                config.medications.forEach(med => {
+                    const schedules = med.schedule.split(',');
+                    let lastTakenToday = false;
+                    
+                    if (med.lastTaken) {
+                        const lastTakenDate = new Date(med.lastTaken);
+                        lastTakenToday = lastTakenDate.getDate() === now.getDate() && 
+                                         lastTakenDate.getMonth() === now.getMonth() && 
+                                         lastTakenDate.getFullYear() === now.getFullYear();
+                    }
+                    
+                    schedules.forEach(time => {
+                        const [hours, minutes] = time.split(':').map(Number);
+                        const scheduleTime = hours * 60 + minutes;
+                        
+                        // If the scheduled time has passed today and medication wasn't taken yet
+                        if (scheduleTime <= currentTime && !lastTakenToday) {
+                            recommendations.push({
+                                type: 'reminder',
+                                message: 'Medication due',
+                                suggestion: `Time to take ${med.dosage} of ${med.name}`
+                            });
+                        }
+                    });
+                });
+                
+                // Regular checkup reminder (once per day)
+                const lastCheckupReminder = localStorage.getItem('lastCheckupReminder');
+                if (!lastCheckupReminder || new Date() - new Date(lastCheckupReminder) > 86400000) {
+                    recommendations.push({
+                        type: 'reminder',
+                        message: 'Daily health checkup',
+                        suggestion: 'Time for your daily health checkup. Please review all vital signs and note any concerns.'
+                    });
+                    localStorage.setItem('lastCheckupReminder', new Date().toISOString());
+                }
+                
+                return recommendations;
+            } catch (error) {
+                console.error('Error generating AI recommendations:', error);
+                return [];
+            }
+        }
+
+        // Initialize Lenis smooth scroll
+        function initializeLenis() {
+            if (window.Lenis) {
+                const lenis = new window.Lenis({
+                    lerp: 0.1,          // Adjust smoothness
+                    smoothWheel: true   // Enable smooth wheel scrolling
+                });
+
+                function raf(time) {
+                    lenis.raf(time);
+                    requestAnimationFrame(raf);
+                }
+                requestAnimationFrame(raf);
+            }
+        }
+        
+        // Display recommendations in UI
+        function displayRecommendations(recommendations) {
+            const container = elements.containers.recommendations;
+            container.innerHTML = '';
+            
+            if (recommendations.length === 0) {
+                container.innerHTML = `
+                    <div class="p-4 bg-slate-800/50 rounded-lg">
+                        <p class="text-gray-400">No recommendations at this time. All vitals appear normal.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Sort recommendations by priority (critical first, then warnings, then others)
+            recommendations.sort((a, b) => {
+                const priority = { 'critical': 1, 'warning': 2, 'reminder': 3, 'suggestion': 4 };
+                return priority[a.type] - priority[b.type];
+            });
+            
+            recommendations.forEach(rec => {
+                const recElement = document.createElement('div');
+                recElement.className = `recommendation ${rec.type}`;
+                
+                let icon = '';
+                let iconColor = '';
+                
+                switch(rec.type) {
+                    case 'critical':
+                        icon = 'fa-exclamation-circle';
+                        iconColor = 'text-red-500';
+                        break;
+                    case 'warning':
+                        icon = 'fa-exclamation-triangle';
+                        iconColor = 'text-yellow-500';
+                        break;
+                    case 'reminder':
+                        icon = 'fa-bell';
+                        iconColor = 'text-green-500';
+                        break;
+                    default:
+                        icon = 'fa-lightbulb';
+                        iconColor = 'text-blue-500';
+                }
+                
+                recElement.innerHTML = `
+                    <div class="flex items-start">
+                        <div class="mr-3 pt-0.5">
+                            <i class="fas ${icon} ${iconColor}"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-medium">${rec.message}</h4>
+                            <p class="text-sm text-gray-300 mt-1">${rec.suggestion}</p>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(recElement);
+                
+                // Add animation for critical alerts
+                if (rec.type === 'critical') {
+                    gsap.from(recElement, {
+                        x: 20,
+                        duration: 0.5,
+                        ease: "elastic.out(1, 0.5)"
+                    });
+                }
+            });
+            
+            // Announce via TTS if enabled
+            if (state.ttsEnabled && state.ttsService) {
+                state.ttsService.announceRecommendations(recommendations);
+            }
+        }
+        
+        // Text-to-Speech Service
+        class TTSService {
+            constructor() {
+                this.synth = window.speechSynthesis;
+                this.voices = [];
+                this.selectedVoice = null;
+                this.loadVoices();
+            }
+            
+            loadVoices() {
+                this.voices = this.synth.getVoices();
+                // Prefer natural-sounding English voices
+                this.selectedVoice = this.voices.find(voice => 
+                    voice.name.includes('Natural') || voice.lang.includes('en-US')
+                ) || this.voices[0];
+            }
+            
+            speak(text, priority = 'normal') {
+                if (!state.ttsEnabled) return;
+                
+                if (this.synth.speaking && priority === 'normal') {
+                    return; // Don't interrupt current speech for normal priority
+                }
+                
+                if (this.synth.speaking) {
+                    this.synth.cancel(); // Cancel for high priority messages
+                }
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.voice = this.selectedVoice;
+                utterance.rate = 0.9;
+                utterance.pitch = 1;
+                
+                this.synth.speak(utterance);
+            }
+            
+            announceRecommendations(recommendations) {
+                if (!recommendations.length || !state.ttsEnabled) return;
+                
+                // Critical messages first
+                const critical = recommendations.filter(r => r.type === 'critical');
+                const warnings = recommendations.filter(r => r.type === 'warning');
+                const others = recommendations.filter(r => !['critical', 'warning'].includes(r.type));
+                
+                critical.forEach(rec => this.speak(`Critical alert: ${rec.message}. ${rec.suggestion}`, 'high'));
+                warnings.forEach(rec => this.speak(`Warning: ${rec.message}. ${rec.suggestion}`, 'high'));
+                others.forEach(rec => this.speak(`Reminder: ${rec.message}. ${rec.suggestion}`));
+            }
+        }
+        
+        // Export data as CSV
+        function exportDataAsCSV() {
+            try {
+                // Prepare CSV content
+                let csvContent = "Timestamp,Heart Rate (bpm),SpO2 (%),Body Temp (°C),Room Temp (°C),Systolic BP,Diastolic BP,ECG,Fall Detected,Risk Level,Stress Level\n";
+                
+                // Find the maximum length of data arrays
+                const maxLength = Math.max(
+                    state.data.heartRate.length,
+                    state.data.spo2.length,
+                    state.data.bodyTemp.length,
+                    state.data.roomTemp.length,
+                    state.data.bloodPressure.length,
+                    state.data.ecg.length,
+                    state.data.fallDetection.length,
+                    state.data.riskLevel.length,
+                    state.data.stressLevel.length
+                );              
+                // Add data rows
+                for (let i = 0; i < maxLength; i++) {
+                    const timestamp = state.data.heartRate[i]?.x || 
+                                    state.data.spo2[i]?.x || 
+                                    state.data.bodyTemp[i]?.x || 
+                                    new Date().getTime();
+                    
+                    const row = [
+                        new Date(timestamp).toISOString(),
+                        state.data.heartRate[i]?.y ?? '--',
+                        state.data.spo2[i]?.y ?? '--',
+                        state.data.bodyTemp[i]?.y ?? '--',
+                        state.data.roomTemp[i]?.y ?? '--',
+                        state.data.bloodPressure[i]?.systolic ?? '--',
+                        state.data.bloodPressure[i]?.diastolic ?? '--',
+                        state.data.ecg[i]?.y ?? '--',
+                        state.data.fallDetection[i]?.y === 1 ? 'Yes' : 'No',
+                        state.data.riskLevel[i]?.y === 1 ? 'High' : 'Normal',
+                        state.data.stressLevel[i]?.y ?? '--'
+                    ];
+                    
+                    csvContent += row.join(',') + '\n';
+                }
+                
+                // Create download link
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', `SwasthAI_data_${new Date().toISOString().slice(0,10)}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                showNotification('CSV exported successfully!', 'success');
+            } catch (error) {
+                console.error('Error exporting CSV:', error);
+                showNotification('Failed to export CSV', 'error');
+            }
+        }
+        
+        // Export data as PDF
+        function exportDataAsPDF() {
+            try {
+                // Get the element to export
+                const element = document.getElementById('dashboard-export');
+                
+                // PDF options
+                const opt = {
+                    margin: 10,
+                    filename: `SwasthAI_report_${new Date().toISOString().slice(0,10)}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { 
+                        scale: 2,
+                        logging: true,
+                        useCORS: true
+                    },
+                    jsPDF: { 
+                        unit: 'mm', 
+                        format: 'a4', 
+                        orientation: 'portrait' 
+                    }
+                };
+                
+                // Generate PDF
+                html2pdf().set(opt).from(element).save();
+                showNotification('PDF exported successfully!', 'success');
+            } catch (error) {
+                console.error('Error exporting PDF:', error);
+                showNotification('Failed to export PDF', 'error');
+            }
+        }
+        
+        // Trigger emergency alert
+        function triggerEmergencyAlert() {
+            // Create emergency overlay
+            const emergencyOverlay = document.createElement('div');
+            emergencyOverlay.className = 'fixed inset-0 bg-red-900/20 z-50 flex items-center justify-center';
+            emergencyOverlay.innerHTML = `
+                <div class="text-center p-8 bg-red-900/80 rounded-xl max-w-md">
+                    <div id="emergency-anim" class="w-32 h-32 mx-auto"></div>
+                    <h2 class="text-2xl font-bold text-white mt-4">EMERGENCY ALERT</h2>
+                    <p class="text-white mt-2">Help has been notified</p>
+                    <button onclick="this.parentElement.parentElement.remove()" 
+                            class="mt-4 px-4 py-2 bg-white text-red-900 rounded-lg">
+                        Dismiss
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(emergencyOverlay);
+            
+            // Load animation in the overlay
+            if (window.lottie) {
+                lottie.loadAnimation({
+                    container: emergencyOverlay.querySelector('#emergency-anim'),
+                    path: 'https://assets1.lottiefiles.com/packages/lf20_kd5rzej5.json',
+                    renderer: 'svg',
+                    loop: true,
+                    autoplay: true
+                });
+            }         
+            // Flash the emergency button
+            gsap.to(elements.buttons.emergency, {
+                duration: 0.5,
+                boxShadow: '0 0 20px rgba(239, 68, 68, 0.8)',
+                yoyo: true,
+                repeat: 3
+            });
+            
+            // Speak emergency alert if TTS is available
+            if (state.ttsService) {
+                state.ttsService.speak('Emergency! Emergency! Please provide immediate assistance.', 'high');
+            }
+        }
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
