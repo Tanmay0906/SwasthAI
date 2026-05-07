@@ -1,4 +1,4 @@
-🩺 SwasthAI: An IoT and ML Based Health Monitoring Dashboard
+## 🩺 SwasthAI: An IoT and ML Based Health Monitoring Dashboard
 
 SwasthAI is an intelligent healthcare monitoring system that integrates IoT sensors, Machine Learning, and a real-time web dashboard to monitor patient health parameters such as Heart Rate, SpO₂, Temperature, ECG, Stress Level, and Risk Level.
 
