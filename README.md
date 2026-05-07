@@ -1,112 +1,196 @@
-# 🩺 SwasthAI: AN IoT and ML BASED HEALTH MONITORING DASHBOARD
+🩺 SwasthAI: An IoT and ML Based Health Monitoring Dashboard
 
-**SwasthAI** is an intelligent healthcare monitoring system that integrates **IoT sensors**, **Machine Learning**, and a **real-time web dashboard** to track vital signs such as heart rate, SpO₂, temperature, ECG.  
-It enables continuous remote health tracking and provides smart recommendations through AI analytics.
+SwasthAI is an intelligent healthcare monitoring system that integrates IoT sensors, Machine Learning, and a real-time web dashboard to monitor patient health parameters such as Heart Rate, SpO₂, Temperature, ECG, Stress Level, and Risk Level.
 
----
-
-## ⚙️ Key Features
-
-- 💓 **Vital Sign Monitoring** — Heart Rate, SpO₂, ECG, Room & Body Temperature.  
-- 🧠 **ML-Based Predictions** —  
-  - Blood Pressure Estimation  
-  - Risk Level Detection  
-  - Stress Level Detection  
-  - Fall Detection  
-- ☁️ **Cloud Integration** — Sensor data sent to **ThingSpeak** for storage and analytics.  
-- 📊 **Interactive Dashboard** — Live charts, health metrics, and history visualization (built using **HTML + CSS + JS + Chart.js**).  
-- 🔊 **Text-to-Speech (TTS)** — Voice alerts for abnormal readings.  
-- 🧩 **AI Recommendations** — Personalized suggestions for health improvement.  
-- 🌙 **Dark Mode Support** and data export (PDF/CSV).
+The system enables continuous remote health tracking and provides AI-powered recommendations using real-time analytics.
 
 ---
 
-## 🧩 Hardware Components
+# ⚙️ Key Features
 
-| Category | Component |
-|-----------|------------|
-| **Microcontroller** | ESP8266|
-| **Sensors** | MAX30102 (HR & SpO₂), ADXL345 (Accelerometer), DHT11 (Temp & Humidity), DS18B20 (Body Temp), AD8232 (ECG) |
-| **Server/Cloud** | Flask Server + ThingSpeak |
-| **ML Models** | BP Estimation, Risk Level, Stress Level, Fall Detection |
-| **Dashboard** | HTML + CSS + JavaScript + Chart.js |
+- 💓 Real-Time Vital Sign Monitoring
+  - Heart Rate
+  - SpO₂
+  - ECG
+  - Room Temperature
+  - Body Temperature
+
+- 🧠 ML-Based Predictions
+  - Blood Pressure Estimation
+  - Risk Level Detection
+  - Stress Level Detection
+  - Fall Detection
+
+- ☁️ Cloud Integration
+  - ThingSpeak data storage and visualization
+
+- 📊 Interactive Dashboard
+  - Live charts
+  - Real-time metrics
+  - Historical data visualization
+  - Chart.js integration
+
+- 🔊 Text-to-Speech (TTS)
+  - Voice alerts for abnormal readings
+
+- 🤖 AI Recommendations
+  - Personalized health suggestions
+
+- 🌙 Additional Features
+  - Dark mode support
+  - PDF/CSV export support
+  - Responsive UI
 
 ---
 
-## 🧠 Machine Learning Workflow
+# 🧩 Hardware Components
 
-1. **Data Acquisition** → Sensor data collected via ESP8266.  
-2. **Pre-Processing** → Cleaning, normalization, and feature extraction.  
-3. **Model Training** → Trained `.pkl` models for prediction.  
-4. **Prediction** → Flask server performs inference and sends results back to ESP8266 / ThingSpeak.  
-5. **Visualization** → Dashboard displays live data & ML outputs with recommendations.
+| Category | Components |
+|---|---|
+| Microcontroller | ESP8266 NodeMCU |
+| Sensors | MAX30102, ADXL345, DHT11, DS18B20, AD8232 |
+| Cloud Platform | ThingSpeak |
+| Backend | Flask Server |
+| ML Models | BP, Risk, Stress, Fall Detection |
+| Frontend | HTML, CSS, JavaScript, Chart.js |
 
 ---
 
-## 🗂️ Project Structure
+# 🧠 Machine Learning Workflow
 
+1. Sensor data collected using ESP8266 and biomedical sensors  
+2. Data pre-processing and normalization  
+3. ML model inference using Flask backend  
+4. Prediction results sent to dashboard and ThingSpeak  
+5. Dashboard visualizes health metrics and recommendations
+
+---
+
+# 🗂️ Project Structure
+
+```bash
 SwasthAI/
 │
-├── mon.py # Flask server
+├── app.py
 ├── models/
-│ ├── bp_model.pkl
-│ ├── risk_model.pkl
-│ ├── stress_model.pkl
-│ └── fall_model.pkl
+│   ├── bp_model.pkl
+│   ├── risk_model.pkl
+│   ├── stress_model.pkl
+│   └── fall_model.pkl
+│
 ├── templates/
-│ └── mon.html # Dashboard UI
-└── requirements.txt
+│   └── index.html
+│
+├── screenshots/
+│
+├── requirements.txt
+└── README.md
+````
 
-## 🚀 How to Run the Project
+---
 
-### 🟦 **1️⃣ Install Dependencies**
+# 🖼️ Dashboard Preview
 
+![Dashboard](screenshots/dashboard.png)
+
+---
+
+# 🏗️ System Architecture
+
+![Architecture](screenshots/architecture.png)
+
+### Data Flow
+
+```text
+Sensors → ESP8266 NodeMCU → Flask Server / ThingSpeak
+        → ML Models → Dashboard + AI Recommendations
+```
+
+---
+
+# 🔧 Sensor Setup
+
+![Sensor Setup](screenshots/sensor_setup.png)
+
+---
+
+# 📈 ThingSpeak Visualization
+
+![ThingSpeak](screenshots/thingspeak_graphs.png)
+
+---
+
+# 🚀 How to Run the Project
+
+## 1️⃣ Install Dependencies
+
+```bash
 pip install flask pandas numpy scikit-learn requests pyttsx3
+```
 
-### 🟩 2️⃣ Run the Flask Server
+## 2️⃣ Run Flask Server
+
+```bash
 python app.py
+```
 
---The server will start on http://127.0.0.1:5000/
+Server starts at:
 
---ESP8266 sends sensor readings here for ML predictions.
+```text
+http://127.0.0.1:5000/
+```
 
-### 🟨 3️⃣ Configure ESP8266
+---
 
--- Open SwasthAI_ESP.ino in Arduino IDE
+## 3️⃣ Configure ESP8266
 
---Update:
+Update:
 
-      --Wi-Fi SSID & Password
+* Wi-Fi SSID & Password
+* Flask Server IP
+* ThingSpeak API Key
 
-      -- Flask Server IP or ThingSpeak API key
+Upload the code using Arduino IDE.
 
---Upload to NodeMCU board.
+---
 
-### 🟧 4️⃣ View Dashboard
+## 4️⃣ Open Dashboard
 
--- Open mon.html in any browser
+Open:
 
--- Live charts will update automatically with new data.
+```text
+index.html
+```
 
-### 🟪 5️⃣ Example Voice Alerts
+in your browser to view live sensor data and ML predictions.
 
--- Once connected, SwasthAI’s TTS system announces:
+---
 
-  -- ⚠️ “Heart rate is above normal range!”
- 
-  -- ✅ “SpO₂ level is stable.”
-  
-  -- 🩺 “Blood pressure within safe limit.”
+# 🔊 Example Voice Alerts
 
-### 🖥️ System Architecture
-[Sensors] → [ESP8266 NodeMCU] → [Flask Server / ThingSpeak] → [ML Models] → [Dashboard (UI) + AI Recommendations]
+* ⚠️ “Heart rate is above normal range!”
+* ✅ “SpO₂ level is stable.”
+* 🩺 “Blood pressure within safe limit.”
 
-### 🧑‍💻 Project Members
+---
 
-Manash Jyoti Mahanta
+# 🔮 Future Scope
 
-Ashraful Hoque Barbhuiya
+* Mobile application support
+* Doctor dashboard integration
+* Emergency alert system
+* Cloud database integration
+* Wearable device support
+* AI chatbot integration
 
-Dhitiman Das
+---
 
-Abujaid Mondal
+# 👨‍💻 Author
+
+## Manash Jyoti Mahanta
+
+Electronics and Communication Engineering
+
+Assam University Silchar
+
+GitHub: [https://github.com/Tanmay0906](https://github.com/Tanmay0906)
